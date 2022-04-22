@@ -18,6 +18,7 @@ def create_application() -> Flask:
             # model_num = int(model_num)
             y_pred = prediction_sigma.get_answer(file.filename, 1)
             y_pred = y_pred.to_dict()
+            y_pred = y_pred['PAY']
             # y_pred = y_pred.to_json(orient="records")
             # print(y_pred)
             # print(y_pred.to_json)
