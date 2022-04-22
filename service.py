@@ -13,11 +13,18 @@ def create_application() -> Flask:
             if 'file' not in request.files:
                 flash('No file part')
             file = request.files['file']
-            # file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(file.filename)
-            # file = "./pay2021-11-24.csv"
-            y_pred = prediction_sigma.get_answer(file.filename)
-            y_pred = y_pred.values.tolist()
+            # model_num = request.form.get("model_num")
+            # model_num = int(model_num)
+            y_pred = prediction_sigma.get_answer(file.filename, 1)
+            y_pred = y_pred.to_dict()
+            # y_pred = y_pred.to_json(orient="records")
+            # print(y_pred)
+            # print(y_pred.to_json)
+            # index = y_pred.index
+            # index = index.values.tolist()
+            # y_pred = y_pred.values.tolist()
+            # return jsonify(y_pred), jsonify(index)
             return jsonify(y_pred)
     return app
 
