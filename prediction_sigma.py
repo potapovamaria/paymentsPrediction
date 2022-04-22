@@ -64,7 +64,6 @@ def SVRModel(train_x, train_y, test_x):
     clf.fit(train_x, train_y)
     y_pred_cvr = clf.predict(test_x)
 
-
     return y_pred_cvr
 
 def LGBMModel(train_x, train_y, test_x):
