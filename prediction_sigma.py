@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
@@ -41,15 +43,15 @@ def XGBoostModel(train_x, train_y, test_x):
 
     return y_pred
 
-def LSSVRModel(train_x, train_y, test_x):
+def LSSVRModel(train_x, train_y):
     lsclf = LSSVR(kernel='rbf',
                   C=10,
                   gamma=0.04)
     train_ = np.reshape(train_y, train_y.shape[0])
     lsclf.fit(train_x, train_)
-    y_pred_lsc = lsclf.predict(test_x)
+    # y_pred_lsc = lsclf.predict(test_x)
 
-    return y_pred_lsc
+    return lsclf
 
 def SVRModel(train_x, train_y, test_x):
     clf = svm.SVR(kernel='rbf',
@@ -92,20 +94,34 @@ def get_answer(file, num_model):
     test_x = []
     for i in range(INPUT_LEN, len(test)):
         test_x.append(test.iloc[i - INPUT_LEN:i])
-    test_y = test.iloc[INPUT_LEN:]
+
     test_x = np.array(test_x)
     test_x = np.reshape(test_x, (test_x.shape[0], test_x.shape[1]))
 
     if num_model == 1:
-        y_pred = LSSVRModel(train_x, train_y, test_x)
+        model = LSSVRModel(train_x, train_y)
+        y_pred_lsc = []
+        test_x_copy = test_x.copy()
+        for i in range(PRED_LEN - INPUT_LEN):
+            if len(y_pred_lsc) < INPUT_LEN:
+                for j in range(1, len(y_pred_lsc) + 1):
+                    test_x_copy[i][-j] = y_pred_lsc[-j].copy()
+            else:
+                test_x_copy[i] = y_pred_lsc[-INPUT_LEN:].copy()
+            y_pred_lsc.append(model.predict([test_x_copy[i]]))
+        y_pred = []
+        for i in range(len(y_pred_lsc)):
+            y_pred.append(y_pred_lsc[i][0])
+
         temp = df_scal[-PRED_LEN + INPUT_LEN:]
         temp.PAY = y_pred
         prediction_lssvr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
-        prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
-        # prediction_lssvr["Date"] = pd.DatetimeIndex(df.index[-PRED_LEN + INPUT_LEN:])
-        indexes = pd.DatetimeIndex(df.index[-PRED_LEN+INPUT_LEN:])
-        indexes = indexes.strftime('%Y-%m-%d')
+
+        indexes = pd.to_datetime(df.index[-PRED_LEN+INPUT_LEN:])
+        indexes = indexes.strftime('%d.%m.%Y')
+
         prediction_lssvr = prediction_lssvr.set_index(indexes)
+
         return prediction_lssvr
     if num_model == 2:
         y_pred = XGBoostModel(train_x, train_y, test_x)
@@ -114,7 +130,7 @@ def get_answer(file, num_model):
         prediction_xgb = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
         prediction_xgb["PAY"] = prediction_xgb["PAY"] * 1000
         indexes = pd.DatetimeIndex(df.index[-PRED_LEN + INPUT_LEN:])
-        indexes = indexes.strftime('%Y-%m-%d')
+        indexes = indexes.strftime('%d.%m.%Y')
         prediction_xgb = prediction_xgb.set_index(indexes)
         return prediction_xgb
     if num_model == 3:
@@ -124,7 +140,7 @@ def get_answer(file, num_model):
         prediction_svr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
         prediction_svr["PAY"] = prediction_svr["PAY"] * 1000
         indexes = pd.DatetimeIndex(df.index[-PRED_LEN + INPUT_LEN:])
-        indexes = indexes.strftime('%Y-%m-%d')
+        indexes = indexes.strftime('%d.%m.%Y')
         prediction_svr = prediction_svr.set_index(indexes)
         return prediction_svr
     if num_model == 4:
@@ -134,9 +150,10 @@ def get_answer(file, num_model):
         prediction_lgb = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
         prediction_lgb["PAY"] = prediction_lgb["PAY"] * 1000
         indexes = pd.DatetimeIndex(df.index[-PRED_LEN + INPUT_LEN:])
-        indexes = indexes.strftime('%Y-%m-%d')
+        indexes = indexes.strftime('%d.%m.%Y')
         prediction_lgb = prediction_lgb.set_index(indexes)
         return prediction_lgb
 
 if __name__ == '__main__':
-    y_pred = get_answer('pay2021-11-24.csv', 1)
+    y_pred = get_answer('pay2021-11-24.csv', 2)
+    print(y_pred)
