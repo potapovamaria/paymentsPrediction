@@ -41,15 +41,15 @@ def XGBoostModel(train_x, train_y, test_x):
 
     return y_pred
 
-def LSSVRModel(train_x, train_y, test_x):
+def LSSVRModel(train_x, train_y):
     lsclf = LSSVR(kernel='rbf',
                   C=10,
                   gamma=0.04)
     train_ = np.reshape(train_y, train_y.shape[0])
     lsclf.fit(train_x, train_)
-    y_pred_lsc = lsclf.predict(test_x)
+    # y_pred_lsc = lsclf.predict(test_x)
 
-    return y_pred_lsc
+    return lsclf
 
 def SVRModel(train_x, train_y, test_x):
     clf = svm.SVR(kernel='rbf',
@@ -97,12 +97,25 @@ def get_answer(file, num_model):
     test_x = np.reshape(test_x, (test_x.shape[0], test_x.shape[1]))
 
     if num_model == 1:
-        y_pred = LSSVRModel(train_x, train_y, test_x)
+        model = LSSVRModel(train_x, train_y)
+        y_pred_lsc = []
+        test_x_copy = test_x.copy()
+        for i in range(PRED_LEN - INPUT_LEN):
+            if len(y_pred_lsc) < INPUT_LEN:
+                for j in range(1, len(y_pred_lsc) + 1):
+                    test_x_copy[i][-j] = y_pred_lsc[-j].copy()
+            else:
+                test_x_copy[i] = y_pred_lsc[-INPUT_LEN:].copy()
+            y_pred_lsc.append(model.predict([test_x_copy[i]]))
+        y_pred = []
+        for i in range(len(y_pred_lsc)):
+            y_pred.append(y_pred_lsc[i][0])
+
         temp = df_scal[-PRED_LEN + INPUT_LEN:]
         temp.PAY = y_pred
         prediction_lssvr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
         prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
-        # prediction_lssvr["Date"] = pd.DatetimeIndex(df.index[-PRED_LEN + INPUT_LEN:])
+
         indexes = pd.DatetimeIndex(df.index[-PRED_LEN+INPUT_LEN:])
         indexes = indexes.strftime('%Y-%m-%d')
         prediction_lssvr = prediction_lssvr.set_index(indexes)
