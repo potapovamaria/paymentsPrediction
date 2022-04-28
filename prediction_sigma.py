@@ -104,7 +104,7 @@ def get_answer(file, num_model):
         prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
         # prediction_lssvr["Date"] = pd.DatetimeIndex(df.index[-PRED_LEN + INPUT_LEN:])
         indexes = pd.DatetimeIndex(df.index[-PRED_LEN+INPUT_LEN:])
-        #indexes = indexes.strftime('%d.%m.%Y')
+        indexes = indexes.strftime('%d.%m.%Y')
         prediction_lssvr = prediction_lssvr.set_index(indexes)
         return prediction_lssvr
     if num_model == 2:
