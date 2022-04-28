@@ -7,6 +7,7 @@ import pandas as pd
 
 def create_application() -> Flask:
     app = Flask(__name__)
+    app.config['JSON_SORT_KEYS'] = False
     @app.route("/prediction/payment", methods=["POST"])
     def dummy():
         if request.method == 'POST':
