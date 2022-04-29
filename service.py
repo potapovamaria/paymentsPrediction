@@ -15,18 +15,13 @@ def create_application() -> Flask:
                 flash('No file part')
             file = request.files['file']
             file.save(file.filename)
+            start_date = request.form.get('start_date')
+            end_date = request.form.get('end_date')
             # model_num = request.form.get("model_num")
             # model_num = int(model_num)
-            y_pred = prediction_sigma.get_answer(file.filename, 1)
+            y_pred = prediction_sigma.get_answer(file.filename, 1, start_date, end_date)
             y_pred = y_pred.to_dict()
             y_pred = y_pred['PAY']
-            # y_pred = y_pred.to_json(orient="records")
-            # print(y_pred)
-            # print(y_pred.to_json)
-            # index = y_pred.index
-            # index = index.values.tolist()
-            # y_pred = y_pred.values.tolist()
-            # return jsonify(y_pred), jsonify(index)
             return jsonify(y_pred)
     return app
 
