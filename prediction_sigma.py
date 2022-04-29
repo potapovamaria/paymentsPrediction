@@ -83,7 +83,7 @@ def get_answer(file, num_model, date_1, date_2):
 
     START_DATE = date_1
     END_DATE = date_2
-    PRED_LEN = (LAST_REAL - START_DATE).days
+    PRED_LEN = (LAST_REAL - START_DATE).days + 1
     INPUT_LEN = 180
 
     scaler = MinMaxScaler()
@@ -108,10 +108,10 @@ def get_answer(file, num_model, date_1, date_2):
     if num_model == 1:
         model = LSSVRModel(train_x, train_y)
         if PRED_LEN > 0 and PRED_LEN_NEW > 0:
-            test_x_copy = train_x[-PRED_LEN - 1].copy()
+            test_x_copy = train_x[-PRED_LEN].copy()
 
             y_pred_lsc = []
-            for i in range(PRED_LEN + 1):
+            for i in range(PRED_LEN):
                 y_pred_lsc.append(model.predict([test_x_copy]))
                 for k in range(1, len(test_x_copy)):
                     test_x_copy[k - 1] = test_x_copy[k]
@@ -121,12 +121,12 @@ def get_answer(file, num_model, date_1, date_2):
             for i in range(len(y_pred_lsc)):
                 y_pred.append(y_pred_lsc[i][0])
 
-            temp = df_scal[-PRED_LEN - 1:]
+            temp = df_scal[-PRED_LEN:]
             temp.PAY = y_pred
             prediction_lssvr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
             prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
 
-            indexes = pd.DatetimeIndex(df.index[-PRED_LEN - 1:])
+            indexes = pd.DatetimeIndex(df.index[-PRED_LEN:])
             indexes = indexes.strftime('%d.%m.%Y')
             prediction_lssvr = prediction_lssvr.set_index(indexes)
 
@@ -155,7 +155,6 @@ def get_answer(file, num_model, date_1, date_2):
                 min(start_date, end_date),
                 max(start_date, end_date)
             )
-            print(res)
 
             indexes = pd.DatetimeIndex(res)
             indexes = indexes.strftime('%d.%m.%Y')
@@ -191,7 +190,7 @@ def get_answer(file, num_model, date_1, date_2):
             prediction_lssvr = prediction_lssvr.set_index(indexes)
 
             return prediction_lssvr
-        elif (PRED_LEN < 0) and (PRED_LEN_NEW > 0) and START_DATE == (LAST_REAL + datetime.timedelta(days=1)):
+        elif (PRED_LEN <= 0) and (PRED_LEN_NEW > 0) and START_DATE == (LAST_REAL + datetime.timedelta(days=1)):
             test_pred = train_x[-1].copy()
             y_pred_new = []
 
@@ -301,5 +300,5 @@ def get_answer(file, num_model, date_1, date_2):
     #     return prediction_lgb
 
 if __name__ == '__main__':
-    y_pred = get_answer('pay2021-11-24.csv', 1, '22.11.2021', '28.11.2021')
+    y_pred = get_answer('pay2021-11-24.csv', 1, '23.11.2021', '24.11.2021')
     print(y_pred)
