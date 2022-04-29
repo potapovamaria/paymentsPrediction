@@ -117,7 +117,7 @@ def get_answer(file, num_model):
         prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
 
         indexes = pd.DatetimeIndex(df.index[-PRED_LEN+INPUT_LEN:])
-        indexes = indexes.strftime('%Y-%m-%d')
+        indexes = indexes.strftime('%d.%m.%Y')
         prediction_lssvr = prediction_lssvr.set_index(indexes)
         return prediction_lssvr
     if num_model == 2:
@@ -127,7 +127,7 @@ def get_answer(file, num_model):
         prediction_xgb = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
         prediction_xgb["PAY"] = prediction_xgb["PAY"] * 1000
         indexes = pd.DatetimeIndex(df.index[-PRED_LEN + INPUT_LEN:])
-        indexes = indexes.strftime('%Y-%m-%d')
+        indexes = indexes.strftime('%d.%m.%Y')
         prediction_xgb = prediction_xgb.set_index(indexes)
         return prediction_xgb
     if num_model == 3:
@@ -137,7 +137,7 @@ def get_answer(file, num_model):
         prediction_svr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
         prediction_svr["PAY"] = prediction_svr["PAY"] * 1000
         indexes = pd.DatetimeIndex(df.index[-PRED_LEN + INPUT_LEN:])
-        indexes = indexes.strftime('%Y-%m-%d')
+        indexes = indexes.strftime('%d.%m.%Y')
         prediction_svr = prediction_svr.set_index(indexes)
         return prediction_svr
     if num_model == 4:
@@ -147,9 +147,10 @@ def get_answer(file, num_model):
         prediction_lgb = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
         prediction_lgb["PAY"] = prediction_lgb["PAY"] * 1000
         indexes = pd.DatetimeIndex(df.index[-PRED_LEN + INPUT_LEN:])
-        indexes = indexes.strftime('%Y-%m-%d')
+        indexes = indexes.strftime('%d.%m.%Y')
         prediction_lgb = prediction_lgb.set_index(indexes)
         return prediction_lgb
 
 if __name__ == '__main__':
     y_pred = get_answer('pay2021-11-24.csv', 1)
+    print(y_pred)
