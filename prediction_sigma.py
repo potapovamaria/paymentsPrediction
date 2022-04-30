@@ -77,9 +77,7 @@ def get_answer(file, num_model, date_1, date_2):
     df = make_data(file)
     LAST_REAL = df.index[-1]
     date_1 = pd.to_datetime(date_1, format='%d.%m.%Y')
-    print(date_1)
     date_2 = pd.to_datetime(date_2, format='%d.%m.%Y')
-    print(date_2)
 
     START_DATE = date_1
     END_DATE = date_2
@@ -104,7 +102,7 @@ def get_answer(file, num_model, date_1, date_2):
         PRED_LEN_NEW = (END_DATE - LAST_REAL).days
     else:
         PRED_LEN_NEW = (END_DATE - START_DATE).days + 1
-
+    print(PRED_LEN, PRED_LEN_NEW)
     if num_model == 1:
         model = LSSVRModel(train_x, train_y)
         if PRED_LEN > 0 and PRED_LEN_NEW > 0:
@@ -163,13 +161,12 @@ def get_answer(file, num_model, date_1, date_2):
             prediction_lssvr = prediction_lssvr.append(prediction_lssvr_new)
 
             return prediction_lssvr
-        elif (PRED_LEN > 0) and (PRED_LEN_NEW < 0):
+        elif (PRED_LEN > 0) and (PRED_LEN_NEW <= 0):
             N = (LAST_REAL - START_DATE).days
             N_END = (LAST_REAL - END_DATE).days
             test_x_copy = train_x[-N - 1].copy()
-
             y_pred_lsc = []
-            for i in range(PRED_LEN):
+            for i in range(PRED_LEN - N_END):
                 y_pred_lsc.append(model.predict([test_x_copy]))
                 for k in range(1, len(test_x_copy)):
                     test_x_copy[k - 1] = test_x_copy[k]
@@ -179,15 +176,26 @@ def get_answer(file, num_model, date_1, date_2):
             for i in range(len(y_pred_lsc)):
                 y_pred.append(y_pred_lsc[i][0])
 
-            temp = df_scal[-N - 1:-N_END]
-            temp.PAY = y_pred
-            prediction_lssvr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
+            if N_END != 0:
+                temp = df_scal[-N - 1:-N_END]
+                temp.PAY = y_pred
+                prediction_lssvr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
 
-            prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
+                prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
 
-            indexes = pd.DatetimeIndex(df.index[-N - 1:-N_END])
-            indexes = indexes.strftime('%d.%m.%Y')
-            prediction_lssvr = prediction_lssvr.set_index(indexes)
+                indexes = pd.DatetimeIndex(df.index[-N - 1:-N_END])
+                indexes = indexes.strftime('%d.%m.%Y')
+                prediction_lssvr = prediction_lssvr.set_index(indexes)
+            else:
+                temp = df_scal[-N - 1:]
+                temp.PAY = y_pred
+                prediction_lssvr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
+
+                prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
+
+                indexes = pd.DatetimeIndex(df.index[-N - 1:])
+                indexes = indexes.strftime('%d.%m.%Y')
+                prediction_lssvr = prediction_lssvr.set_index(indexes)
 
             return prediction_lssvr
         elif (PRED_LEN <= 0) and (PRED_LEN_NEW > 0) and START_DATE == (LAST_REAL + datetime.timedelta(days=1)):
@@ -223,7 +231,6 @@ def get_answer(file, num_model, date_1, date_2):
             prediction_lssvr = prediction_lssvr.set_index(indexes)
 
             return prediction_lssvr
-
 
     #
     # if num_model == 2:
@@ -300,5 +307,5 @@ def get_answer(file, num_model, date_1, date_2):
     #     return prediction_lgb
 
 if __name__ == '__main__':
-    y_pred = get_answer('pay2021-11-24.csv', 1, '23.11.2021', '24.11.2021')
+    y_pred = get_answer('pay2021-11-24.csv', 1, '25.11.2021', '28.11.2021')
     print(y_pred)
