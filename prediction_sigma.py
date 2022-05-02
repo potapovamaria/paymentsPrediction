@@ -102,7 +102,6 @@ def get_answer(file, num_model, date_1, date_2):
         PRED_LEN_NEW = (END_DATE - LAST_REAL).days
     else:
         PRED_LEN_NEW = (END_DATE - START_DATE).days + 1
-    print(PRED_LEN, PRED_LEN_NEW)
     if num_model == 1:
         model = LSSVRModel(train_x, train_y)
         if PRED_LEN > 0 and PRED_LEN_NEW > 0:
@@ -159,6 +158,7 @@ def get_answer(file, num_model, date_1, date_2):
             prediction_lssvr_new = prediction_lssvr_new.set_index(indexes)
 
             prediction_lssvr = prediction_lssvr.append(prediction_lssvr_new)
+            prediction_lssvr["PAY"] = round(prediction_lssvr["PAY"], 2)
 
             return prediction_lssvr
         elif (PRED_LEN > 0) and (PRED_LEN_NEW <= 0):
@@ -196,6 +196,7 @@ def get_answer(file, num_model, date_1, date_2):
                 indexes = pd.DatetimeIndex(df.index[-N - 1:])
                 indexes = indexes.strftime('%d.%m.%Y')
                 prediction_lssvr = prediction_lssvr.set_index(indexes)
+                prediction_lssvr["PAY"] = round(prediction_lssvr["PAY"], 2)
 
             return prediction_lssvr
         elif (PRED_LEN <= 0) and (PRED_LEN_NEW > 0) and START_DATE == (LAST_REAL + datetime.timedelta(days=1)):
@@ -224,11 +225,11 @@ def get_answer(file, num_model, date_1, date_2):
                 min(start_date, end_date),
                 max(start_date, end_date)
             )
-            print(res)
 
             indexes = pd.DatetimeIndex(res)
             indexes = indexes.strftime('%d.%m.%Y')
             prediction_lssvr = prediction_lssvr.set_index(indexes)
+            prediction_lssvr["PAY"] = round(prediction_lssvr["PAY"], 2)
 
             return prediction_lssvr
 
