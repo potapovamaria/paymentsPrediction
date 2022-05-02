@@ -213,7 +213,7 @@ def get_answer(file, num_model, date_1, date_2):
             for i in range(len(y_pred_new)):
                 y_pred.append(y_pred_new[i][0])
 
-            temp = df_scal[:PRED_LEN_NEW]
+            temp = df_scal[-PRED_LEN_NEW:]
             temp.PAY = y_pred
             prediction_lssvr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
             prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
@@ -232,6 +232,41 @@ def get_answer(file, num_model, date_1, date_2):
             prediction_lssvr["PAY"] = round(prediction_lssvr["PAY"], 2)
 
             return prediction_lssvr
+        else:
+            N = (END_DATE - LAST_REAL).days
+            test_pred = train_x[-1].copy()
+            y_pred_new = []
+
+            for i in range(N):
+                y_pred_new.append(model.predict([test_pred]))
+                for k in range(1, len(test_pred)):
+                    test_pred[k - 1] = test_pred[k]
+                test_pred[-1] = y_pred_new[-1]
+
+            y_pred = []
+            for i in range(len(y_pred_new)):
+                y_pred.append(y_pred_new[i][0])
+
+            temp = df_scal[-N:]
+            temp.PAY = y_pred
+            prediction_lssvr = pd.DataFrame(scaler.inverse_transform(temp), columns=df_scal.columns)
+            prediction_lssvr["PAY"] = prediction_lssvr["PAY"] * 1000
+
+            start_date = LAST_REAL + datetime.timedelta(days=1)
+            end_date = END_DATE
+
+            res = pd.date_range(
+                min(start_date, end_date),
+                max(start_date, end_date)
+            )
+
+            indexes = pd.DatetimeIndex(res)
+            indexes = indexes.strftime('%d.%m.%Y')
+            prediction_lssvr = prediction_lssvr.set_index(indexes)
+            prediction_lssvr["PAY"] = round(prediction_lssvr["PAY"], 2)
+
+            N_END = (START_DATE - LAST_REAL).days
+            return prediction_lssvr[N_END - 1:]
 
     #
     # if num_model == 2:
@@ -308,5 +343,5 @@ def get_answer(file, num_model, date_1, date_2):
     #     return prediction_lgb
 
 if __name__ == '__main__':
-    y_pred = get_answer('pay2021-11-24.csv', 1, '25.11.2021', '28.11.2021')
+    y_pred = get_answer('pay2021-11-24.csv', 1, '26.11.2021', '28.11.2021')
     print(y_pred)
