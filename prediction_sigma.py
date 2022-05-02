@@ -102,6 +102,7 @@ def get_answer(file, num_model, date_1, date_2):
         PRED_LEN_NEW = (END_DATE - LAST_REAL).days
     else:
         PRED_LEN_NEW = (END_DATE - START_DATE).days + 1
+
     if num_model == 1:
         model = LSSVRModel(train_x, train_y)
         if PRED_LEN > 0 and PRED_LEN_NEW > 0:
@@ -128,6 +129,9 @@ def get_answer(file, num_model, date_1, date_2):
             prediction_lssvr = prediction_lssvr.set_index(indexes)
 
             test_pred = train_x[-1].copy()
+            for i in range(1, len(test_pred)):
+                test_pred[i - 1] = test_pred[i]
+            test_pred[len(test_pred) - 1] = train_y[-1]
             y_pred_new = []
 
             for i in range(PRED_LEN_NEW):
@@ -201,6 +205,9 @@ def get_answer(file, num_model, date_1, date_2):
             return prediction_lssvr
         elif (PRED_LEN <= 0) and (PRED_LEN_NEW > 0) and START_DATE == (LAST_REAL + datetime.timedelta(days=1)):
             test_pred = train_x[-1].copy()
+            for i in range(1, len(test_pred)):
+                test_pred[i - 1] = test_pred[i]
+            test_pred[len(test_pred) - 1] = train_y[-1]
             y_pred_new = []
 
             for i in range(PRED_LEN_NEW):
@@ -235,6 +242,9 @@ def get_answer(file, num_model, date_1, date_2):
         else:
             N = (END_DATE - LAST_REAL).days
             test_pred = train_x[-1].copy()
+            for i in range(1, len(test_pred)):
+                test_pred[i - 1] = test_pred[i]
+            test_pred[len(test_pred) - 1] = train_y[-1]
             y_pred_new = []
 
             for i in range(N):
@@ -343,5 +353,8 @@ def get_answer(file, num_model, date_1, date_2):
     #     return prediction_lgb
 
 if __name__ == '__main__':
-    y_pred = get_answer('pay2021-11-24.csv', 1, '26.11.2021', '28.11.2021')
+    y_pred = get_answer('pay2021-11-24.csv', 1, '20.11.2021', '25.11.2021')
+    # plt.figure(figsize=(25, 12)) # создание фигуры 25 на 12
+    # plt.plot(y_pred.index, y_pred.PAY, label="prediction", alpha=.7) # строим график x - даты(начиная со стартовой даты), y - предсказания, имя графика - prediction, alpha - коэффициент, отвечающий за прозрачность графика
+    # plt.show()
     print(y_pred)
