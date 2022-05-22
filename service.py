@@ -19,7 +19,8 @@ def create_application() -> Flask:
             end_date = request.form.get('end_date')
             # model_num = request.form.get("model_num")
             # model_num = int(model_num)
-            y_pred = prediction_sigma.get_answer(file.filename, 1, start_date, end_date)
+            pick_check = request.form.get('enter_pick')
+            y_pred = prediction_sigma.get_answer(file.filename, 1, start_date, end_date, pick_check)
             y_pred = y_pred.to_dict()
             y_pred = y_pred['PAY']
             return jsonify(y_pred)
