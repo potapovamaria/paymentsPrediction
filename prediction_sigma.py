@@ -73,7 +73,85 @@ def LGBMModel(train_x, train_y):
 
     return model_lgb
 
-def get_answer(file, num_model, date_1, date_2):
+
+def get_picks(file, START_DATE, INPUT_LEN, PRED_LEN):
+    dff = pd.read_csv(file, sep=';')
+    dff['PAY'] = dff['PAY'].apply(lambda x: float(x.replace(',', '.')))
+    dff['PAY'] = dff['PAY'] / 1000
+    dff['Date'] = pd.to_datetime(dff['PAY_DATE'], format='%d.%m.%Y')
+    dff['Month'] = dff['Date'].dt.month
+    dff['Year'] = dff['Date'].dt.year
+    dff['WeekDay'] = dff['Date'].dt.day_of_week
+    dff = dff.sort_values(by='Date')
+    idx = dff.groupby(['Month', 'Year'])['PAY'].transform(max) == dff['PAY']
+
+    dff = dff.set_index(pd.DatetimeIndex(dff['Date']))
+
+    df_peak = pd.DataFrame()
+    grouped = dff.groupby(['Year', 'Month'])
+    for condition, group in grouped:
+        p = np.percentile(group.PAY, 95)
+        df_peak = pd.concat([df_peak, group[group.PAY > p]], axis=0)
+    dfq = pd.DataFrame({'Date': pd.date_range(start='2012-01-01', periods=len(dff), freq='D'), 'PAY': range(len(dff))})
+    dfq.PAY = np.nan
+
+    for i in df_peak.index:
+        dfq.loc[dfq[dfq.Date == i].index, 'PAY'] = df_peak.loc[i].PAY
+
+    dfq.loc[0, 'PAY'] = dfq[:31]['PAY'].min()
+
+    # Интерполяция временного ряда
+    dfi = dfq.copy()
+    dfi['PAY'] = dfi['PAY'].interpolate(method='linear', order=5)  # 95% 90%
+
+    # Новый интерполированый ряд с пиками изначального ряда
+    dfi = dfi.set_index(pd.DatetimeIndex(dfi.Date))
+    dfi = dfi.drop(['Date'], axis=1)
+
+    scaler_pick = MinMaxScaler()
+    df_scal_pick = scaler_pick.fit_transform(dfi)
+    df_scal_pick = pd.DataFrame(df_scal_pick, columns=dfi.columns)
+
+    START_DATE = START_DATE - datetime.timedelta(days=180
+                                                 )
+    test_pick = df_scal_pick[dfi.index >= START_DATE]
+    train_pick = df_scal_pick[dfi.index < START_DATE]
+
+    train_x_pick = []
+    for i in range(INPUT_LEN, len(train_pick)):
+        train_x_pick.append(train_pick.iloc[i - INPUT_LEN:i])
+
+    train_y_pick = train_pick.iloc[INPUT_LEN:]
+    train_x_pick = np.array(train_x_pick)
+    train_y_pick = np.array(train_y_pick)
+    train_x_pick = train_x_pick[:, :, 0]
+    train_y_pick = train_y_pick[:, 0]
+
+    test_x_pick = []
+    for i in range(INPUT_LEN, len(test_pick)):
+        test_x_pick.append(test_pick.iloc[i - INPUT_LEN:i])
+
+    test_y_pick = test_pick.iloc[INPUT_LEN:]
+    test_x_pick = np.array(test_x_pick)
+    test_y_pick = np.array(test_y_pick)
+    test_x_pick = test_x_pick[:, :, 0]
+    test_y_pick = test_y_pick[:, 0]
+
+    lsclf_pick = LSSVR(kernel='linear', C=2, gamma=0.001)
+    train_ = np.reshape(train_y_pick, train_y_pick.shape[0])
+
+    lsclf_pick.fit(train_x_pick, train_)
+
+    y_pred_lsc_pick = lsclf_pick.predict(test_x_pick)
+
+    temp_pick = df_scal_pick[-PRED_LEN:]
+    temp_pick.PAY = y_pred_lsc_pick
+    prediction_lsc_pick = pd.DataFrame(scaler_pick.inverse_transform(temp_pick), columns=df_scal_pick.columns) * 1000
+
+    return prediction_lsc_pick, df_peak
+
+
+def get_answer(file, num_model, date_1, date_2, pick_check):
     df = make_data(file)
     LAST_REAL = df.index[-1]
     date_1 = pd.to_datetime(date_1, format='%d.%m.%Y')
@@ -127,6 +205,18 @@ def get_answer(file, num_model, date_1, date_2):
             indexes = pd.DatetimeIndex(df.index[-PRED_LEN:])
             indexes = indexes.strftime('%d.%m.%Y')
             prediction_lssvr = prediction_lssvr.set_index(indexes)
+
+            if pick_check == 2:
+                prediction_lsc_pick, df_peak = get_picks(file, START_DATE, INPUT_LEN, PRED_LEN)
+                prediction_lsc_pick = prediction_lsc_pick.set_index(pd.DatetimeIndex(df.index[-PRED_LEN:]))
+                prediction_lsc_copy = prediction_lssvr.copy()
+                df_copy = df_peak.index[df_peak.index >= START_DATE].copy()
+
+                for i in range(len(prediction_lssvr)):
+                    for j in range(len(df_copy)):
+                        if (prediction_lssvr.index[i:i + 1]) == (df_copy[j:j + 1]):
+                            prediction_lsc_copy.PAY[i:i + 1] = prediction_lsc_pick.PAY[i:i + 1]
+                prediction_lssvr = prediction_lsc_copy.copy()
 
             test_pred = train_x[-1].copy()
             for i in range(1, len(test_pred)):
@@ -200,7 +290,19 @@ def get_answer(file, num_model, date_1, date_2):
                 indexes = pd.DatetimeIndex(df.index[-N - 1:])
                 indexes = indexes.strftime('%d.%m.%Y')
                 prediction_lssvr = prediction_lssvr.set_index(indexes)
-                prediction_lssvr["PAY"] = round(prediction_lssvr["PAY"], 2)
+
+            if pick_check == 2:
+                prediction_lsc_pick, df_peak = get_picks(file, START_DATE, INPUT_LEN, PRED_LEN)
+                prediction_lsc_pick = prediction_lsc_pick.set_index(pd.DatetimeIndex(df.index[-PRED_LEN:]))
+                prediction_lsc_copy = prediction_lssvr.copy()
+                df_copy = df_peak.index[df_peak.index >= START_DATE].copy()
+
+                for i in range(len(prediction_lssvr)):
+                    for j in range(len(df_copy)):
+                        if (prediction_lssvr.index[i:i + 1]) == (df_copy[j:j + 1]):
+                            prediction_lsc_copy.PAY[i:i + 1] = prediction_lsc_pick.PAY[i:i + 1]
+                prediction_lssvr = prediction_lsc_copy.copy()
+            prediction_lssvr["PAY"] = round(prediction_lssvr["PAY"], 2)
 
             return prediction_lssvr
         elif (PRED_LEN <= 0) and (PRED_LEN_NEW > 0) and START_DATE == (LAST_REAL + datetime.timedelta(days=1)):
@@ -353,8 +455,8 @@ def get_answer(file, num_model, date_1, date_2):
     #     return prediction_lgb
 
 if __name__ == '__main__':
-    y_pred = get_answer('pay2021-11-24.csv', 1, '20.11.2021', '25.11.2021')
-    # plt.figure(figsize=(25, 12)) # создание фигуры 25 на 12
-    # plt.plot(y_pred.index, y_pred.PAY, label="prediction", alpha=.7) # строим график x - даты(начиная со стартовой даты), y - предсказания, имя графика - prediction, alpha - коэффициент, отвечающий за прозрачность графика
-    # plt.show()
+    y_pred = get_answer('pay2021-11-24.csv', 1, '10.05.2021', '26.11.2021', 1)
+    plt.figure(figsize=(25, 12)) # создание фигуры 25 на 12
+    plt.plot(y_pred.index, y_pred.PAY, label="prediction", alpha=.7) # строим график x - даты(начиная со стартовой даты), y - предсказания, имя графика - prediction, alpha - коэффициент, отвечающий за прозрачность графика
+    plt.show()
     print(y_pred)
