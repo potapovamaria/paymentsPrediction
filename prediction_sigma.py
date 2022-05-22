@@ -456,7 +456,7 @@ def get_answer(file, num_model, date_1, date_2, pick_check):
 
 if __name__ == '__main__':
     y_pred = get_answer('pay2021-11-24.csv', 1, '10.05.2021', '26.11.2021', 1)
-    plt.figure(figsize=(25, 12)) # создание фигуры 25 на 12
-    plt.plot(y_pred.index, y_pred.PAY, label="prediction", alpha=.7) # строим график x - даты(начиная со стартовой даты), y - предсказания, имя графика - prediction, alpha - коэффициент, отвечающий за прозрачность графика
-    plt.show()
+    # plt.figure(figsize=(25, 12)) # создание фигуры 25 на 12
+    # plt.plot(y_pred.index, y_pred.PAY, label="prediction", alpha=.7) # строим график x - даты(начиная со стартовой даты), y - предсказания, имя графика - prediction, alpha - коэффициент, отвечающий за прозрачность графика
+    # plt.show()
     print(y_pred)
