@@ -20,7 +20,7 @@ def create_application() -> Flask:
             # model_num = request.form.get("model_num")
             # model_num = int(model_num)
             pick_check = request.form.get('enter_pick')
-
+            pick_check = int(pick_check)
             y_pred = prediction_sigma.get_answer(file.filename, 1, start_date, end_date, pick_check)
             y_pred = y_pred.to_dict()
             y_pred = y_pred['PAY']
